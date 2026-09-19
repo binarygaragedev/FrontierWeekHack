@@ -1,0 +1,202 @@
+{
+  "platform": "RideSafe Mobility",
+  "city": "Stockholm",
+  "timestamp": "2026-09-14T08:30:00Z",
+  "trips": [
+    {
+      "trip_id": "RIDE-101",
+      "status": "normal",
+      "driver": {
+        "driver_id": "DRV-204",
+        "rating": 4.8,
+        "shift_hours": 6,
+        "recent_incidents": 0,
+        "rest_compliance": true
+      },
+      "rider": {
+        "rider_id": "RDR-880",
+        "rating": 4.9,
+        "prior_complaints": 0,
+        "payment_status": "verified"
+      },
+      "route": {
+        "pickup_zone": "Central Station",
+        "dropoff_zone": "Norrmalm",
+        "distance_km": 8.4,
+        "risk_level": "low",
+        "night_trip": false
+      },
+      "trip_signals": {
+        "route_deviation": 0.0,
+        "driver_response_time_sec": 18,
+        "idle_time_sec": 26,
+        "temperature_c": 22,
+        "speed_kmh": 54
+      },
+      "thresholds": {
+        "shift_hours": 12,
+        "driver_rating": 4.0,
+        "route_risk": "medium",
+        "response_time_sec": 30,
+        "idle_time_sec": 120,
+        "route_deviation_pct": 15
+      }
+    },
+    {
+      "trip_id": "RIDE-102",
+      "status": "warning",
+      "driver": {
+        "driver_id": "DRV-110",
+        "rating": 4.2,
+        "shift_hours": 10,
+        "recent_incidents": 1,
+        "rest_compliance": true
+      },
+      "rider": {
+        "rider_id": "RDR-311",
+        "rating": 4.6,
+        "prior_complaints": 1,
+        "payment_status": "verified"
+      },
+      "route": {
+        "pickup_zone": "Södermalm",
+        "dropoff_zone": "Farsta",
+        "distance_km": 15.3,
+        "risk_level": "medium",
+        "night_trip": true
+      },
+      "trip_signals": {
+        "route_deviation": 11.0,
+        "driver_response_time_sec": 42,
+        "idle_time_sec": 180,
+        "temperature_c": 24,
+        "speed_kmh": 62
+      },
+      "thresholds": {
+        "shift_hours": 12,
+        "driver_rating": 4.0,
+        "route_risk": "medium",
+        "response_time_sec": 30,
+        "idle_time_sec": 120,
+        "route_deviation_pct": 15
+      }
+    },
+    {
+      "trip_id": "RIDE-103",
+      "status": "critical",
+      "driver": {
+        "driver_id": "DRV-077",
+        "rating": 3.6,
+        "shift_hours": 13,
+        "recent_incidents": 3,
+        "rest_compliance": false
+      },
+      "rider": {
+        "rider_id": "RDR-501",
+        "rating": 4.1,
+        "prior_complaints": 2,
+        "payment_status": "verified"
+      },
+      "route": {
+        "pickup_zone": "Hammarby Sjöstad",
+        "dropoff_zone": "Kista",
+        "distance_km": 20.7,
+        "risk_level": "high",
+        "night_trip": true
+      },
+      "trip_signals": {
+        "route_deviation": 29.0,
+        "driver_response_time_sec": 75,
+        "idle_time_sec": 410,
+        "temperature_c": 29,
+        "speed_kmh": 71
+      },
+      "thresholds": {
+        "shift_hours": 12,
+        "driver_rating": 4.0,
+        "route_risk": "medium",
+        "response_time_sec": 30,
+        "idle_time_sec": 120,
+        "route_deviation_pct": 15
+      }
+    },
+    {
+      "trip_id": "RIDE-104",
+      "status": "warning",
+      "driver": {
+        "driver_id": "DRV-431",
+        "rating": 4.7,
+        "shift_hours": 8,
+        "recent_incidents": 0,
+        "rest_compliance": true
+      },
+      "rider": {
+        "rider_id": "RDR-790",
+        "rating": 2.8,
+        "prior_complaints": 3,
+        "payment_status": "verified"
+      },
+      "route": {
+        "pickup_zone": "Kungsholmen",
+        "dropoff_zone": "Liljeholmen",
+        "distance_km": 9.1,
+        "risk_level": "medium",
+        "night_trip": false
+      },
+      "trip_signals": {
+        "route_deviation": 12.0,
+        "driver_response_time_sec": 26,
+        "idle_time_sec": 90,
+        "temperature_c": 23,
+        "speed_kmh": 52
+      },
+      "thresholds": {
+        "shift_hours": 12,
+        "driver_rating": 4.0,
+        "route_risk": "medium",
+        "response_time_sec": 30,
+        "idle_time_sec": 120,
+        "route_deviation_pct": 15
+      }
+    },
+    {
+      "trip_id": "RIDE-105",
+      "status": "normal",
+      "driver": {
+        "driver_id": "DRV-980",
+        "rating": 4.9,
+        "shift_hours": 5,
+        "recent_incidents": 0,
+        "rest_compliance": true
+      },
+      "rider": {
+        "rider_id": "RDR-992",
+        "rating": 4.8,
+        "prior_complaints": 0,
+        "payment_status": "verified"
+      },
+      "route": {
+        "pickup_zone": "Gamla Stan",
+        "dropoff_zone": "Solna",
+        "distance_km": 11.5,
+        "risk_level": "low",
+        "night_trip": false
+      },
+      "trip_signals": {
+        "route_deviation": 2.0,
+        "driver_response_time_sec": 16,
+        "idle_time_sec": 34,
+        "temperature_c": 21,
+        "speed_kmh": 50
+      },
+      "thresholds": {
+        "shift_hours": 12,
+        "driver_rating": 4.0,
+        "route_risk": "medium",
+        "response_time_sec": 30,
+        "idle_time_sec": 120,
+        "route_deviation_pct": 15
+      }
+    }
+  ]
+}

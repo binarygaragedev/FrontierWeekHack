@@ -7,6 +7,11 @@ set -euo pipefail
 # Region: swedencentral
 # =============================================================================
 
+# Prevent Git Bash on Windows from rewriting Azure resource IDs like
+# /subscriptions/... into local filesystem paths.
+export MSYS_NO_PATHCONV=1
+export MSYS2_ARG_CONV_EXCL='*'
+
 # --- Azure CLI extensions ----------------------------------------------------
 # Auto-install required CLI extensions non-interactively (no Y/n prompts).
 az config set extension.use_dynamic_install=yes_without_prompt --only-show-errors >/dev/null 2>&1 || true
