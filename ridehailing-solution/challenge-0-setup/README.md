@@ -1,90 +1,105 @@
 # Challenge 0: Setup & Authentication
 
-Time: ~20 minutes
-
 ## Objectives
 
-By the end of this challenge, you will have:
+This setup stage provides the foundational environment for the ride-hailing solution. After deployment, the solution includes:
 
-- ✅ A Microsoft Foundry project created for the ride-hailing AI solution
-- ✅ A deployed model ready for agent development
-- ✅ Application Insights configured for tracing and monitoring
-- ✅ A local `.env` file with connection details
-- ✅ Verified authentication from your machine to the Azure Foundry environment
+- ✅ A fully provisioned Microsoft Foundry project for the ride-hailing solution
+- ✅ A deployed AI model ready to support the solution agents
+- ✅ Application Insights provisioned for tracing and monitoring
+- ✅ A generated `.env` file with connection details for the remaining solution components
+- ✅ Verified connectivity from the development environment to Microsoft Foundry
 
-## Scenario
+## Context
 
-This solution focuses on a ride-hailing platform similar to Uber, with a strong emphasis on:
+This is a multi-agent AI solution for a ride-hailing platform similar to Uber. The final solution focuses on:
 
-- passenger and driver safety,
-- route risk evaluation,
-- real-time in-trip monitoring,
-- customer support and incident resolution,
-- operational trust and transparency.
+- passenger and driver safety
+- route risk evaluation
+- real-time in-trip monitoring
+- customer support and incident resolution
+- operational trust and transparency
 
-Before building agents, the environment must be provisioned in Azure and connected to Microsoft Foundry.
+Before I build agents, monitoring, and evaluation flows, I need a working Foundry environment with a deployed model and telemetry resources.
 
-## Prerequisites
+## Local Development Setup
 
-Before starting, make sure you have:
+Before starting, I need the following:
 
 - An Azure subscription
 - Contributor access to the subscription
-- A Foundry User role assigned in the Microsoft Foundry project or account
+- Foundry User role assigned on the Foundry account or project
 - Azure CLI installed
 - Python 3.10+ installed
 
-## Step 1: Log in to Azure
+> [!NOTE]
+> Contributor or Owner access alone is not enough for the later build steps. The Foundry User role is also required to run agents in Challenges 1-4.
+
+This solution is intended to run from a local development environment.
 
 ```bash
+# Clone the repository
+git clone https://github.com/binarygaragedev/FrontierWeekHack
+cd FrontierWeekHack
+
+# Create and activate a virtual environment
+python -m venv .venv
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
+
+# Install dependencies
+python -m pip install -r requirements.txt
+
+# Log in to Azure
 az login
 ```
 
-If needed, set the correct subscription:
+If my account has access to multiple subscriptions, I select the correct one:
 
 ```bash
 az account set --subscription "<your-subscription-name-or-id>"
 ```
 
-## Step 2: Run the deployment script
+## Challenge Task
 
-From the `ridehailing-solution` folder, run:
+From the `ridehailing-solution` folder, deploy the environment:
 
 ```bash
 bash challenge-0-setup/deploy.sh
 ```
 
-You can also pass a custom suffix or tag, for example:
+To create predictable resource names, I can provide a suffix:
 
 ```bash
 SUFFIX=myride01 bash challenge-0-setup/deploy.sh
 ```
 
-## What the script deploys
+## Expected Output
 
-The script creates:
+The deployment script provisions the core infrastructure for the solution:
 
-- a resource group,
-- Microsoft Foundry AI Services account,
-- a Foundry project,
-- a deployed model (`gpt-5.4`),
-- a Log Analytics workspace,
-- an Application Insights resource,
-- and the `.env` file with connection values for future challenges.
+- a resource group
+- a Microsoft Foundry AI Services account
+- a Foundry project
+- a deployed model
+- a Log Analytics workspace
+- an Application Insights resource
+- a root-level `.env` file with connection values for future challenges
 
-## Step 3: Verify the setup
+## Validation
 
-After deployment:
+When the deployment finishes, I verify the following:
 
 1. Open the Azure Portal.
-2. Find the resource group created for this solution.
-3. Confirm that the Foundry account, project, Log Analytics workspace, and Application Insights resource exist.
-4. Open the Microsoft Foundry portal and ensure the project is visible.
-5. Navigate to the model deployment and verify that `gpt-5.4` is available and running.
+2. Find the resource group created for the ride-hailing solution.
+3. Confirm that the Foundry account, project, Log Analytics workspace, and Application Insights resource were created.
+4. Open the Microsoft Foundry portal and confirm that the project is visible.
+5. Open the model deployment view and verify that `gpt-5.4` is deployed successfully.
+6. Send a short test prompt in the model playground to confirm the deployment is responding.
 
-## Environment file
+## Environment Configuration
 
-The deployment writes a `.env` file at the root of the solution folder. It contains values such as:
+The deployment writes a `.env` file at the root of the ride-hailing solution. It will contain values similar to:
 
 ```env
 FOUNDRY_RESOURCE_NAME=...
@@ -97,14 +112,15 @@ AZURE_EXPERIMENTAL_ENABLE_GENAI_TRACING=true
 OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=true
 ```
 
-## Success criteria
+## Success Criteria
 
 - [ ] Azure resources are created successfully
-- [ ] A Foundry project exists
-- [ ] A model deployment appears as successful
-- [ ] Application Insights is connected or ready for tracing
-- [ ] A `.env` file is created and contains the correct configuration
+- [ ] The Microsoft Foundry project is visible in the portal
+- [ ] The model deployment shows a successful status
+- [ ] Application Insights is available for tracing
+- [ ] A `.env` file is created with the expected configuration values
+- [ ] A test prompt can be sent successfully to the deployed model
 
-## Next step
+## What Comes Next
 
-Once this step succeeds, the next stage is to build the specialized agents for the ride-hailing workflow.
+Once this setup is complete, the environment is ready for Challenge 1, where I build the specialized agents for the ride-hailing workflow.
