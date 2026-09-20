@@ -188,23 +188,27 @@ Safety Risk and Trip Assessment Agent
         |
         +--> Check driver profile, rider history, route warning, risk policy
         |
-        +--> If low risk -> proceed to live operations
-        +--> If medium/high risk -> escalate for review or manual intervention
+        +--> Output pre-trip decision owner: approve, review_required, or reject
+        +--> If approved -> trip starts and live monitoring begins
+        +--> If review_required/reject -> operations review before trip start
         |
         v
 Vehicle Telemetry and Dangerous Driving Agent
         |
         +--> Monitor OBD speed, acceleration, braking, RPM, engine load, steering events
         |
-        +--> Detect harsh braking, speeding, rapid acceleration, aggression events
-        +--> If anomaly detected -> raise safety alert, add risky event score, trigger intervention
+        +--> Emit event-level telemetry risk signals (not final live state)
+        +--> Send structured telemetry payload to In-Trip Monitoring Agent
         |
         v
 Driver Operations and In-Trip Monitoring Agent
         |
         +--> Monitor route, driver behavior, emergency signals, trip anomalies
+        +--> Merge telemetry signals with route and policy context
+        +--> Own final live risk state (normal, warning, critical, review_required)
         |
-        +--> If anomaly detected -> alert and trigger safety workflow
+        +--> If conflict exists, apply policy priority and escalate when confidence is low
+        +--> Trigger intervention workflow when final live state requires action
         |
         v
 Customer Support and Incident Resolution Agent
@@ -219,22 +223,28 @@ Business outcome: safe trip, informed resolution, operational insight
 
 This flow ensures that safety is checked before a trip is accepted, then monitored during the trip using both route data and vehicle telemetry, and finally resolved with structured support logic when incidents occur.
 
+Contract ownership between live agents:
+
+- Telemetry Agent: owns event detection and event severity output.
+- In-Trip Monitoring Agent: owns the authoritative final live risk state and intervention decision.
+- Conflict handling: if telemetry and route/context disagree, In-Trip Monitoring applies policy thresholds and sets `review_required` when certainty is insufficient.
+
 ### Example workflow scenario: suspicious trip escalation
 
 A concrete example of the operational workflow is shown below:
 
 1. A passenger requests a ride at 11:45 PM in an area with a higher-than-normal incident rate.
 2. The Safety Risk and Trip Assessment Agent checks the driver profile, rider history, route risk, and local safety conditions.
-3. The system detects that the driver has been active for several hours and the route passes through a high-risk district. The risk score is elevated.
-4. The Vehicle Telemetry and Dangerous Driving Agent receives OBD data and detects harsh braking, rapid acceleration, and speeding above the threshold.
-5. The agent does not automatically approve the trip. Instead, it sends a warning to the operations team and asks for manual review or a safer cautionary route.
-6. The trip is accepted only after the route is verified and a safety check is completed.
-7. During the trip, the Driver Operations and In-Trip Monitoring Agent detects a detour and a delayed response from the driver.
-8. The vehicle telemetry stream also shows a hard-brake sequence and elevated RPM near a high-risk junction.
-9. The system triggers a safety alert, shares the event with the operations dashboard, and identifies the trip as requiring escalation.
-10. The passenger receives a check-in message from the platform and is offered a safe fallback option if needed.
-11. If the passenger later raises a complaint, the Customer Support and Incident Resolution Agent reviews trip telemetry, policy rules, and incident history to recommend a fair resolution.
-12. Final output is a structured report for operations: trip risk status, dangerous driving events, support outcome, and any corrective action required for future rides.
+3. The system detects that the driver has been active for several hours and the route passes through a high-risk district. The pre-trip decision is `review_required`.
+4. Operations performs manual review, confirms additional safeguards, and approves trip start.
+5. After departure, the Vehicle Telemetry and Dangerous Driving Agent receives OBD data and detects harsh braking, rapid acceleration, and speeding above threshold.
+6. The Telemetry Agent emits structured event payloads and forwards them to the Driver Operations and In-Trip Monitoring Agent.
+7. During the trip, the In-Trip Monitoring Agent also detects a detour and delayed driver response.
+8. The In-Trip Monitoring Agent merges telemetry and route context, sets final live risk state to `critical`, and triggers escalation.
+9. The system raises a safety alert in the operations dashboard and launches intervention workflow.
+10. The passenger receives a check-in message and is offered a safe fallback option if needed.
+11. If the passenger later raises a complaint, the Customer Support and Incident Resolution Agent reviews telemetry evidence, policy rules, and incident history to recommend a fair resolution.
+12. Final output is a structured report for operations: pre-trip decision, live risk state, dangerous-driving evidence, support outcome, and corrective actions.
 
 This example shows how the workflow links risk detection, real-time safety monitoring, OBD telemetry, and customer support into one operational loop.
 

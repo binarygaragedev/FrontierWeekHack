@@ -9,9 +9,11 @@ Usage:
 import os
 import sys
 import time
+import json
 from pathlib import Path
 
 from dotenv import load_dotenv
+from openai.types.responses.response_input_param import FunctionCallOutput
 
 
 def _find_repo_root() -> Path:
@@ -50,6 +52,54 @@ def setup_tracing():
     print("✅ Azure Monitor exporter connected")
 
 
+def fetch_live_trip_signals(trip_id: str) -> str:
+    """Returns in-trip telemetry events and route context for live risk consolidation."""
+    live_trip_data = {
+        "RIDE-103": {
+            "trip_id": "RIDE-103",
+            "lifecycle_phase": "in_trip",
+            "telemetry_agent_payload": {
+                "source": "telemetry_agent",
+                "events": [
+                    {
+                        "event_type": "hard_brake",
+                        "event_severity": "high",
+                        "risk_points": 3,
+                        "evidence": {"speed_kph": 78, "decel_mps2": -5.1, "rpm": 4200},
+                    },
+                    {
+                        "event_type": "speeding",
+                        "event_severity": "high",
+                        "risk_points": 3,
+                        "evidence": {"speed_kph": 102, "zone_limit_kph": 70},
+                    },
+                    {
+                        "event_type": "rapid_acceleration",
+                        "event_severity": "medium",
+                        "risk_points": 2,
+                        "evidence": {"accel_mps2": 3.7},
+                    },
+                ],
+            },
+            "route_context": {
+                "route_risk_level": "high",
+                "route_deviation_pct": 18,
+                "idle_time_sec": 135,
+                "driver_response_time_sec": 42,
+            },
+            "policy_thresholds": {
+                "high_severity_event_count_for_critical": 2,
+                "route_deviation_pct_warning": 12,
+            },
+        }
+    }
+
+    trip = live_trip_data.get(trip_id)
+    if not trip:
+        return json.dumps({"error": f"Trip '{trip_id}' not found"})
+    return json.dumps(trip)
+
+
 def run_traced_agent_call():
     print("\n=== Running traced agent call ===")
 
@@ -57,9 +107,12 @@ def run_traced_agent_call():
     from azure.ai.projects.models import PromptAgentDefinition, FunctionTool
     from azure.identity import DefaultAzureCredential
 
-    check_risk_tool = FunctionTool(
-        name="evaluate_trip_risk",
-        description="Assess trip safety using driver, rider, route, and telemetry data.",
+    live_signal_tool = FunctionTool(
+        name="fetch_live_trip_signals",
+        description=(
+            "Fetch in-trip telemetry event payload and route context. "
+            "Telemetry payload is event-level only and does not represent final live risk state."
+        ),
         parameters={
             "type": "object",
             "properties": {
@@ -78,31 +131,59 @@ def run_traced_agent_call():
     openai_client = client.get_openai_client()
 
     agent = client.agents.create_version(
-        agent_name="ride-safety-tracing-agent",
+        agent_name="ride-intrip-monitoring-tracing-agent",
         definition=PromptAgentDefinition(
             model=MODEL_DEPLOYMENT_NAME,
             instructions=(
-                "You are a ride-hailing safety assistant. "
-                "Use the provided trip context and call evaluate_trip_risk if needed. "
-                "Return a concise safety summary with status, reason, and recommended action."
+                "You are an In-Trip Monitoring decision agent for a ride-hailing platform. "
+                "Assume the trip has already started (lifecycle_phase=in_trip). "
+                "Always call fetch_live_trip_signals first. "
+                "Telemetry events are input signals only. You own the final_live_risk_state decision. "
+                "If telemetry and route context conflict, apply policy thresholds and set review_required when uncertain. "
+                "Return strict JSON with keys: trip_id, lifecycle_phase, state_owner, final_live_risk_state, "
+                "decision_reason, escalation_action."
             ),
-            tools=[check_risk_tool],
+            tools=[live_signal_tool],
         ),
     )
 
     conversation = openai_client.conversations.create()
     response = openai_client.responses.create(
         input=(
-            "Analyze this trip for safety risk.\n"
-            "Trip: RIDE-103\n"
-            "Driver: shift_hours=13, rating=3.6, recent_incidents=3, rest_compliance=false\n"
-            "Rider: prior_complaints=2\n"
-            "Route: risk_level=high, night_trip=true, route_deviation=29%, response_time=75s, idle_time=410s\n"
-            "Make a decision and explain the reason."
+            "Analyze in-trip safety and produce the final live risk state for trip RIDE-103. "
+            "Remember: telemetry is event-level signal source, and In-Trip Monitoring is final state owner."
         ),
         conversation=conversation.id,
         extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
     )
+
+    while True:
+        function_calls = [item for item in response.output if item.type == "function_call"]
+        if not function_calls:
+            break
+
+        input_list = []
+        for item in function_calls:
+            if item.name == "fetch_live_trip_signals":
+                args = json.loads(item.arguments)
+                result = fetch_live_trip_signals(args["trip_id"])
+            else:
+                result = json.dumps({"error": f"Unknown tool '{item.name}'"})
+
+            input_list.append(
+                FunctionCallOutput(
+                    type="function_call_output",
+                    call_id=item.call_id,
+                    output=result,
+                )
+            )
+
+        response = openai_client.responses.create(
+            input=input_list,
+            conversation=conversation.id,
+            extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
+        )
+
     print(f"✅ Agent responded: {response.output_text[:180]}...")
 
     openai_client.conversations.delete(conversation_id=conversation.id)
