@@ -10,10 +10,15 @@ import os
 import sys
 import time
 import json
+import subprocess
 from pathlib import Path
 
-from dotenv import load_dotenv
-from openai.types.responses.response_input_param import FunctionCallOutput
+MISSING_DEPENDENCIES = []
+try:
+    from dotenv import load_dotenv
+except ModuleNotFoundError:
+    load_dotenv = None
+    MISSING_DEPENDENCIES.append("python-dotenv")
 
 
 def _find_repo_root() -> Path:
@@ -24,16 +29,69 @@ def _find_repo_root() -> Path:
 
 
 env_path = _find_repo_root() / ".env"
-load_dotenv(env_path)
-
-if os.getenv("AZURE_EXPERIMENTAL_ENABLE_GENAI_TRACING") != "true":
-    print("❌ AZURE_EXPERIMENTAL_ENABLE_GENAI_TRACING is not set to 'true' in .env")
-    print("   Add: AZURE_EXPERIMENTAL_ENABLE_GENAI_TRACING=true")
-    sys.exit(1)
+if load_dotenv:
+    load_dotenv(env_path)
 
 PROJECT_CONNECTION_STRING = os.getenv("PROJECT_CONNECTION_STRING")
 MODEL_DEPLOYMENT_NAME = os.getenv("MODEL_DEPLOYMENT_NAME", "gpt-5.4")
 APPINSIGHTS_CONN_STRING = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")
+FORCE_WAIT_SECONDS = int(os.getenv("MONITOR_FORCE_WAIT_SECONDS", "45"))
+
+
+def wait_for_exit() -> None:
+    """Keep the console open so users can read output before exit."""
+    fallback_wait_used = False
+
+    if os.name == "nt":
+        # Use a native keypress wait on Windows. This does not require stdin.
+        try:
+            import msvcrt
+
+            print("\nPress any key to exit...")
+            msvcrt.getch()
+            return
+        except Exception:
+            fallback_wait_used = True
+
+    try:
+        input("\nPress Enter to exit...")
+    except EOFError:
+        # Some launch modes do not provide stdin. On Windows, force a pause.
+        if os.name == "nt":
+            exit_code = os.system("cmd /c pause")
+            if exit_code != 0:
+                fallback_wait_used = True
+        else:
+            fallback_wait_used = True
+
+    if fallback_wait_used:
+        print(
+            f"\nInteractive pause is unavailable in this launch mode. "
+            f"Keeping output visible for {FORCE_WAIT_SECONDS} seconds..."
+        )
+        time.sleep(FORCE_WAIT_SECONDS)
+
+
+def ensure_console_launch() -> None:
+    """If launched via pythonw (no console), relaunch in cmd so output is visible."""
+    if os.name != "nt":
+        return
+
+    if os.environ.get("MONITOR_CONSOLE_RELAUNCHED") == "1":
+        return
+
+    if sys.executable.lower().endswith("pythonw.exe"):
+        script_path = Path(__file__).resolve()
+        repo_root = _find_repo_root()
+        venv_python = repo_root / ".venv" / "Scripts" / "python.exe"
+        python_cmd = f'"{venv_python}"' if venv_python.exists() else "py"
+        relaunch_cmd = (
+            f'set MONITOR_CONSOLE_RELAUNCHED=1 && '
+            f'cd /d "{script_path.parent}" && '
+            f'{python_cmd} "{script_path.name}"'
+        )
+        subprocess.Popen(["cmd", "/k", relaunch_cmd])
+        sys.exit(0)
 
 
 def setup_tracing():
@@ -106,6 +164,7 @@ def run_traced_agent_call():
     from azure.ai.projects import AIProjectClient
     from azure.ai.projects.models import PromptAgentDefinition, FunctionTool
     from azure.identity import DefaultAzureCredential
+    from openai.types.responses.response_input_param import FunctionCallOutput
 
     live_signal_tool = FunctionTool(
         name="fetch_live_trip_signals",
@@ -208,15 +267,35 @@ def verify_traces():
 
 
 def main():
-    if not PROJECT_CONNECTION_STRING:
-        print("❌ PROJECT_CONNECTION_STRING not set. Run challenge 0 first!")
-        sys.exit(1)
+    try:
+        ensure_console_launch()
 
-    setup_tracing()
-    run_traced_agent_call()
-    verify_traces()
+        if MISSING_DEPENDENCIES:
+            print("❌ Missing Python dependencies:")
+            for dep in MISSING_DEPENDENCIES:
+                print(f"   - {dep}")
+            print("\nInstall dependencies and try again:")
+            print("   python -m pip install -r requirements.txt")
+            return
 
-    print("\n🎉 Monitoring is active! Check App Insights for the ride safety trace.")
+        if os.getenv("AZURE_EXPERIMENTAL_ENABLE_GENAI_TRACING") != "true":
+            print("❌ AZURE_EXPERIMENTAL_ENABLE_GENAI_TRACING is not set to 'true' in .env")
+            print("   Add: AZURE_EXPERIMENTAL_ENABLE_GENAI_TRACING=true")
+            return
+
+        if not PROJECT_CONNECTION_STRING:
+            print("❌ PROJECT_CONNECTION_STRING not set. Run challenge 0 first!")
+            return
+
+        setup_tracing()
+        run_traced_agent_call()
+        verify_traces()
+
+        print("\n🎉 Monitoring is active! Check App Insights for the ride safety trace.")
+    except Exception as exc:
+        print(f"\n❌ monitor.py failed: {exc}")
+    finally:
+        wait_for_exit()
 
 
 if __name__ == "__main__":

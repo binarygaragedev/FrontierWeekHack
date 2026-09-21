@@ -1,10 +1,8 @@
 # Challenge 2: Monitor with Application Insights
 
-Time: ~20 minutes
-
 ## Objectives
 
-By the end of this challenge, you will have:
+By the end of this challenge, following item will be completed:
 
 - ✅ Tracing enabled for the ride-hailing safety agents
 - ✅ Agent calls captured in Application Insights
@@ -50,6 +48,13 @@ Timing model:
 ## Step 1: Run the monitoring script
 
 From the `ridehailing-solution` root:
+
+```bash
+cd challenge-2-monitor
+run-monitor.cmd
+```
+
+Fallback option:
 
 ```bash
 cd challenge-2-monitor

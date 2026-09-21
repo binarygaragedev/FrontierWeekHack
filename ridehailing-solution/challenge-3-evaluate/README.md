@@ -1,10 +1,9 @@
 # Challenge 3: Evaluate
 
-Time: ~30 minutes
 
 ## Objectives
 
-By the end of this challenge, you will have:
+By the end of this challenge, we will have:
 
 - ✅ A dataset of ride-hailing safety scenarios
 - ✅ A systematic evaluation of the ride safety agent

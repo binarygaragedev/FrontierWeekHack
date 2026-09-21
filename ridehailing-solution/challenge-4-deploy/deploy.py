@@ -26,10 +26,12 @@ MODEL_DEPLOYMENT_NAME = os.getenv("MODEL_DEPLOYMENT_NAME", "gpt-5.4")
 TRIP_DATA_PATH = Path(__file__).resolve().parent.parent / "challenge-1-build" / "trip_data.json"
 
 TRIP_IDS = ["RIDE-101", "RIDE-102", "RIDE-103", "RIDE-104", "RIDE-105"]
+WORKFLOW_ORCHESTRATOR_AGENT_NAME = "ride-workflow-orchestrator-agent"
 SAFETY_AGENT_NAME = "ride-safety-risk-agent"
 TELEMETRY_AGENT_NAME = "ride-telemetry-agent"
 INTRIP_AGENT_NAME = "ride-intrip-monitoring-agent"
 SUPPORT_AGENT_NAME = "ride-incident-response-agent"
+WORKFLOW_AGENT_NAME = os.getenv("WORKFLOW_AGENT_NAME", "ride-safety-workflow")
 
 
 def evaluate_trip_risk(trip_id: str) -> str:
@@ -305,6 +307,23 @@ def ensure_agents_deployed() -> tuple:
         credential=DefaultAzureCredential(),
     )
     existing_names = {a.name for a in client.agents.list()}
+
+    if WORKFLOW_ORCHESTRATOR_AGENT_NAME not in existing_names:
+        client.agents.create_version(
+            agent_name=WORKFLOW_ORCHESTRATOR_AGENT_NAME,
+            definition=PromptAgentDefinition(
+                model=MODEL_DEPLOYMENT_NAME,
+                instructions=(
+                    "You are the workflow orchestrator for ride-hailing safety operations. "
+                    "Coordinate these agent stages in order: pre-trip risk assessment, telemetry event detection, "
+                    "in-trip risk consolidation, and incident response. "
+                    "This agent defines orchestration policy and stage ownership, while execution may happen in code."
+                ),
+            ),
+        )
+        print(f"  Deployed: {WORKFLOW_ORCHESTRATOR_AGENT_NAME}")
+    else:
+        print(f"  Found existing: {WORKFLOW_ORCHESTRATOR_AGENT_NAME}")
 
     if SAFETY_AGENT_NAME not in existing_names:
         client.agents.create_version(
@@ -598,6 +617,76 @@ def print_ride_health_report(report: dict):
         print(response)
 
 
+def create_workflow_agent(workflow_agent_name: str) -> str:
+    """Create or update a portal-visible workflow agent using WorkflowAgentDefinition."""
+    from azure.ai.projects import AIProjectClient
+    from azure.ai.projects.models import WorkflowAgentDefinition
+    from azure.identity import DefaultAzureCredential
+
+    client = AIProjectClient(
+        endpoint=PROJECT_CONNECTION_STRING,
+        credential=DefaultAzureCredential(),
+        allow_preview=True,
+    )
+
+    workflow_yaml = (
+        "kind: Workflow\n"
+        f"name: {workflow_agent_name}\n"
+        "description: Ride-hailing safety workflow (pre-trip, telemetry, in-trip consolidation, support)\n"
+        "trigger:\n"
+        "  kind: OnConversationStart\n"
+        "  id: trigger_start\n"
+        "  actions:\n"
+        "    - kind: InvokeAzureAgent\n"
+        "      id: step_pretrip\n"
+        "      agent:\n"
+        f"        name: {SAFETY_AGENT_NAME}\n"
+        "      conversationId: =System.ConversationId\n"
+        "      input:\n"
+        '        messages: ""\n'
+        "      output:\n"
+        "        autoSend: true\n"
+        "    - kind: InvokeAzureAgent\n"
+        "      id: step_telemetry\n"
+        "      agent:\n"
+        f"        name: {TELEMETRY_AGENT_NAME}\n"
+        "      conversationId: =System.ConversationId\n"
+        "      input:\n"
+        '        messages: ""\n'
+        "      output:\n"
+        "        autoSend: true\n"
+        "    - kind: InvokeAzureAgent\n"
+        "      id: step_intrip\n"
+        "      agent:\n"
+        f"        name: {INTRIP_AGENT_NAME}\n"
+        "      conversationId: =System.ConversationId\n"
+        "      input:\n"
+        '        messages: ""\n'
+        "      output:\n"
+        "        autoSend: true\n"
+        "    - kind: InvokeAzureAgent\n"
+        "      id: step_support\n"
+        "      agent:\n"
+        f"        name: {SUPPORT_AGENT_NAME}\n"
+        "      conversationId: =System.ConversationId\n"
+        "      input:\n"
+        '        messages: ""\n'
+        "      output:\n"
+        "        autoSend: true\n"
+        "    - kind: EndConversation\n"
+        "      id: step_end\n"
+    )
+
+    result = client.agents.create_version(
+        agent_name=workflow_agent_name,
+        definition=WorkflowAgentDefinition(workflow=workflow_yaml),
+        description="Ride-hailing workflow (SDK-created)",
+    )
+    print(f"  Workflow agent ready: {result.name} (version {result.version})")
+    client.close()
+    return result.name
+
+
 def main():
     if not PROJECT_CONNECTION_STRING:
         print("❌ PROJECT_CONNECTION_STRING not set. Run challenge 0 first!")
@@ -606,6 +695,14 @@ def main():
     safety_agent, telemetry_agent, intrip_agent, support_agent = ensure_agents_deployed()
     workflow_report = run_ride_health_workflow(safety_agent, telemetry_agent, intrip_agent, support_agent)
     print_ride_health_report(workflow_report)
+
+    print("\n=== Step 3: Create Portal-Visible Workflow Agent ===")
+    workflow_name = WORKFLOW_AGENT_NAME if WORKFLOW_AGENT_NAME and not WORKFLOW_AGENT_NAME.startswith("<") else "ride-safety-workflow"
+    workflow_name = create_workflow_agent(workflow_name)
+
+    print("\n✅ Workflow agent created.")
+    print(f"   Name: {workflow_name}")
+    print("   View in Foundry portal -> Build -> Agents (kind: workflow)")
 
     print("\n✅ Ride-hailing workflow complete.")
 

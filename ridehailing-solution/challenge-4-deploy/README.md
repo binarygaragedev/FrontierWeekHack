@@ -1,10 +1,9 @@
 # Challenge 4: Production Workflow
 
-Time: ~20 minutes
 
 ## Objectives
 
-By the end of this challenge, you will have:
+By the end of this challenge, we will have:
 
 - ✅ A production-style trip risk workflow
 - ✅ A four-agent orchestration pattern for rides
@@ -32,6 +31,12 @@ The ownership model is:
 - Incident Response and Customer Support Agent owns post-alert investigation and support actions.
 
 ## Workflow design
+
+> [!NOTE]
+> The workflow in this challenge is orchestrated in `deploy.py` and also published as a
+> portal-visible workflow agent using `WorkflowAgentDefinition`.
+> In Azure AI Foundry, check **Build -> Agents** and look for `ride-safety-workflow`
+> (or the custom name from `WORKFLOW_AGENT_NAME` in your `.env`).
 
 The production workflow is:
 
@@ -72,11 +77,12 @@ python deploy.py
 
 The script will:
 
-- ensure the safety and incident agents exist,
+- ensure the workflow orchestrator and all operational agents exist,
 - evaluate a batch of trip scenarios,
 - generate telemetry event payloads,
 - consolidate final live risk states,
 - trigger incident analysis for higher-risk rides,
+- create or update a portal-visible workflow agent,
 - and print a final ride health report.
 
 ## Why this matters
